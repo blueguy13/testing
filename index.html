@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Minecraft Server Status</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #1e1e2f, #2a2a3e);
+            color: #f0f0f0;
+            text-align: center;
+            padding: 20px;
+        }
+
+        h1 {
+            color: #00d97e;
+            text-shadow: 2px 2px 5px rgba(0, 0, 0, 0.5);
+        }
+
+        input {
+            width: 80%;
+            padding: 12px;
+            margin-top: 20px;
+            border-radius: 8px;
+            border: none;
+            font-size: 16px;
+        }
+
+        button {
+            padding: 12px 20px;
+            margin-top: 10px;
+            border: none;
+            border-radius: 8px;
+            background: #00d97e;
+            color: #fff;
+            font-size: 16px;
+            cursor: pointer;
+        }
+
+        .result {
+            margin-top: 20px;
+        }
+
+        .error {
+            color: red;
+        }
+
+        img {
+            margin: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Minecraft Server Status</h1>
+    <input type="text" id="serverAddress" placeholder="Enter server address (e.g., play.example.com)" onkeypress="handleKeyPress(event)">
+    <button onclick="redirectToServerStatus()">Check Status</button>
+    <div class="result" id="result"></div>
+
+    <script>
+        function redirectToServerStatus() {
+            const address = document.getElementById("serverAddress").value.trim();
+            if (!address) {
+                alert("Please enter a server address.");
+                return;
+            }
+            const url = new URL(window.location.href);
+            window.location.href = `${url.origin}${url.pathname}?server=${address}`;
+        }
+
+        function handleKeyPress(event) {
+            if (event.key === "Enter") {
+                redirectToServerStatus();
+            }
+        }
+
+        async function getServerStatus(server) {
+            const resultDiv = document.getElementById("result");
+            resultDiv.innerHTML = "<p>Loading...</p>";
+
+            try {
+                const response = await fetch(`https://api.mcsrvstat.us/2/${server}`);
+                const data = await response.json();
+
+                if (!data.online) {
+                    resultDiv.innerHTML = `<p class="error">Server is offline or invalid address.</p>`;
+                    return;
+                }
+
+                const motdHtml = data.motd.html ? data.motd.html.join("<br>") : "No MOTD available";
+                resultDiv.innerHTML = `
+                    <img src="https://api.mcsrvstat.us/icon/${server}" alt="Server Icon" />
+                    <p><strong>Address:</strong> ${data.hostname || server}</p>
+                    <p><strong>MOTD:</strong><br>${motdHtml}</p>
+                    <p><strong>Players:</strong> ${data.players.online} / ${data.players.max}</p>
+                    <p><strong>Version:</strong> ${data.version}</p>
+                    <p><strong>IP:</strong> ${data.ip}</p>
+                    <p><strong>Port:</strong> ${data.port}</p>
+                `;
+            } catch (error) {
+                resultDiv.innerHTML = `<p class="error">Error fetching server status. Please try again later.</p>`;
+                console.error(error);
+            }
+        }
+
+        function getServerFromUrl() {
+            const params = new URLSearchParams(window.location.search);
+            return params.get("server");
+        }
+
+        const serverFromUrl = getServerFromUrl();
+        if (serverFromUrl) {
+            document.getElementById("serverAddress").value = serverFromUrl;
+            getServerStatus(serverFromUrl);
+        }
+    </script>
+</body>
+</html>
